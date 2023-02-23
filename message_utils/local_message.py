@@ -4,7 +4,7 @@
 import json
 from typing import Any
 
-from pyutils.message_utils.base import BaseMessage
+from utils.message_utils.base import BaseMessage
 
 
 class LocalMessage(BaseMessage):
