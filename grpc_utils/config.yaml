@@ -1,0 +1,14 @@
+# require
+source_module:
+rpc_path:
+dest_file_path:
+dest_class_name:
+rcp_server_name:
+
+# key words
+client_path:
+server_path:
+client_template_path:
+server_template_path:
+server_imports:
+verbose: true

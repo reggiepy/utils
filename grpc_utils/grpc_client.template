@@ -1,0 +1,10 @@
+from grpclib import grpc_service
+
+
+class {{ data.class_name }}:
+{% for func  in data.class_funcs %}
+    @classmethod
+    @grpc_service(server="{{ data.server}}")
+    def {{ func.name }}(cls, {{ func.parametes }}):
+        pass
+{% endfor %}

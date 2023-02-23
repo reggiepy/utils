@@ -1,0 +1,29 @@
+# *_*coding:utf-8 *_*
+# @Author : Reggie
+# @Time : 2022/11/15 16:53
+
+import functools
+
+{% for imp in data.server_needs.imports %}
+{{ imp }}{% endfor %}
+from saaS.rpc.rpc_server import func_wrapper
+
+_wrapper = functools.partial(
+    func_wrapper.wrapper_factories,
+    wrappers=[
+        func_wrapper.model_wrapper(),
+        func_wrapper.restformak_wrapper(),
+        func_wrapper.django_db_check_wrapper(),
+    ]
+)
+
+
+class {{ data.class_name }}:
+    BASE = {{ data.BASE }}
+{% for func  in data.class_funcs %}
+    @classmethod
+    @_wrapper()
+    def {{ func.name }}(cls, *args, **kwargs):
+        return cls.BASE.{{ func.name }}(*args, **kwargs)
+{% endfor %}
+
