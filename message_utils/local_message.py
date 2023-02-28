@@ -35,5 +35,5 @@ class LocalMessage(BaseMessage):
 
 
 if __name__ == '__main__':
-    result = LocalMessage().send("wtt", "hello")
+    result = LocalMessage().send("online", "hello")
     print(result)
