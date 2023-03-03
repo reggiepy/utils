@@ -18,6 +18,7 @@ class CalStatus(Enum):
     CALCULATE_ANOMALY = (36000, "计算异常")  # 参数非法
     MODULE_INSTANCE_ERROR = (37000, "模块实例化失败")  # 参数非法
     MODULE_ERROR = (37100, "加载模块异常")  # 参数非法
+
     PARAM_IS_NULL = (34001, "参数为空")  # 参数为空
     PARAM_ILLEGAL = (34002, "参数非法")  # 参数非法
     UNKNOWN_ERROR = (35000, "未知异常")  # 未知异常
@@ -52,7 +53,7 @@ class INFOFeedback:
         def _info_data(info_type_, code1, msg1, msg2):
             # info_ = {"code": code1, "msg": msg2 or msg1}
             info_ = {"code": code1, "msg": msg1, "data": msg2} if msg2 and msg1 != msg2 else {"code1": code, "msg": msg1}
-            return {"info_type": f"{info_type_}", "info_data": info_}
+            return {"info_type": f"{info_type_}", "info_msg": info_}
         if str(code_).startswith("3"):
             return _info_data("warn", code_, msg_, msg)
         elif str(code_).startswith("4"):
@@ -62,9 +63,11 @@ class INFOFeedback:
 
     def feedback(self, msg=None, code=None):
         if code == "note":
-            info_data = {"info_type": "note", "msg": msg}
+            info_data = {"info_type": "note", "info_msg": msg}
         elif code == "result":
-            info_data = {"info_type": "result", "msg": "计算结果", "data": msg}
+            info_data = {"info_type": "result", "info_msg": "计算结果", "info_data": msg}
+        elif code == "exit":
+            info_data = {"info_type": "exit", "info_msg": "退出计算"}
         else:
             info_data = self.json_info(msg, code)
         if info_data and hasattr(self, "task"):
