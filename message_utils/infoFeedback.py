@@ -18,6 +18,7 @@ class CalStatus(Enum):
     CALCULATE_ANOMALY = (36000, "计算异常")  # 参数非法
     MODULE_INSTANCE_ERROR = (37000, "模块实例化失败")  # 参数非法
     MODULE_ERROR = (37100, "加载模块异常")  # 参数非法
+    DATA_ERROR = (37200, "加载数据异常")  # 参数非法
 
     PARAM_IS_NULL = (34001, "参数为空")  # 参数为空
     PARAM_ILLEGAL = (34002, "参数非法")  # 参数非法
