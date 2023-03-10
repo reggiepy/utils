@@ -4,8 +4,9 @@ from pathlib import Path
 
 
 class FileHandle:
-    def __init__(self, file_path):
-        self.f = Path.cwd().joinpath(file_path)
+
+    def __init__(self, file_path, is_path=True):
+        self.f = Path(file_path) if is_path else Path.cwd().joinpath(file_path)
         self.f.parent.mkdir(parents=True, exist_ok=True)
 
     def read(self):
@@ -46,10 +47,16 @@ class RunInfoRecord:
         self.info_f = FileHandle(f"{RUN_INFO_PATH}/run_info_{task}/info.txt")
 
     def get_run_state(self):
-        return self.state_f.read()
+        try:
+            return self.state_f.read()
+        except FileNotFoundError:
+            return ""
 
     def get_run_info(self):
-        return self.info_f.read_json()
+        try:
+            return self.info_f.read_json()
+        except FileNotFoundError:
+            return {}
 
     def update_run_state(self, state):
         self.state_f.write(state)
@@ -63,11 +70,11 @@ class RunInfoRecord:
 
 if __name__ == '__main__':
     pass
-    a = f"{RUN_INFO_PATH}/b/a.txt"
+    # a = f"{RUN_INFO_PATH}/b/a.txt"
     # FileHandle("dd/a.txt").write_json({"a": 5}, mode="a")
     # a = FileHandle("dd")
     # a.rm()
-    print(a)
-    print(Path(a).is_file())
+    # print(a)
+    # print(Path(a).is_file())
     # a.rmdir()
     # print(FileHandle("a.txt").read_json(), type(FileHandle("a.txt").read_json()))
