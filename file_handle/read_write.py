@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 
@@ -33,16 +34,14 @@ class FileHandle:
                 json__ = json_
             self.f.write_text(json.dumps(json__))
 
-    def rmdir(self):
-        self.f.parent.rmdir()
-
-    def unlink(self):
-        self.f.unlink()
+    def rm(self):
+        self.f.unlink() if self.f.is_file() else shutil.rmtree(self.f)
 
 
-class RunInfo:
+class RunInfoRecord:
     def __init__(self, task):
         from chemical_chaos.settings import RUN_INFO_PATH
+        self.info_dir = FileHandle(f"{RUN_INFO_PATH}/run_info_{task}")
         self.state_f = FileHandle(f"{RUN_INFO_PATH}/run_info_{task}/state.txt")
         self.info_f = FileHandle(f"{RUN_INFO_PATH}/run_info_{task}/info.txt")
 
@@ -59,14 +58,16 @@ class RunInfo:
         self.info_f.write_json(info, mode="a")
 
     def del_run_info(self):
-        self.info_f.unlink()
-        self.state_f.unlink()
-        self.state_f.rmdir()
+        self.info_dir.rm()
+
 
 if __name__ == '__main__':
     pass
+    a = f"{RUN_INFO_PATH}/b/a.txt"
     # FileHandle("dd/a.txt").write_json({"a": 5}, mode="a")
-    # a = FileHandle("dd/a.txt")
-    # a.unlink()
+    # a = FileHandle("dd")
+    # a.rm()
+    print(a)
+    print(Path(a).is_file())
     # a.rmdir()
     # print(FileHandle("a.txt").read_json(), type(FileHandle("a.txt").read_json()))
