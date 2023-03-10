@@ -5,6 +5,7 @@ import datetime
 import json
 import logging
 import os
+import sys
 import time
 from functools import wraps
 from pathlib import Path
@@ -16,6 +17,9 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 logger_path = Path(BASE_DIR) \
     .joinpath("logs") \
     .joinpath("time_cost_statistic.log")
+if getattr(sys, 'frozen', False) and getattr(sys, '_MEIPASS', None):
+    logger_path = Path("/chemical_data/chemical_chaos").joinpath("logs") \
+        .joinpath("time_cost_statistic.log")
 time_cost_statistic_logger = logging.getLogger('time_cost_statistic')
 formatter = logging.Formatter('%(message)s')
 handler = logging.FileHandler(logger_path.as_posix(), encoding='utf-8')
