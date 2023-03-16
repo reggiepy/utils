@@ -5,12 +5,12 @@ from functools import partial
 from typing import Any
 
 from utils.message_utils.base import BaseMessage, ChemicalMessageHandle
-from utils.message_utils.constants import Platform, DestinationModel
+from utils.message_utils.constants import PlatformEnum, DestinationEnum, FlagEnum
 
 
 class ChemicalMessage(ChemicalMessageHandle, BaseMessage):
-    PLATFORM = Platform.WEB
-    DESTINATION = DestinationModel.WEB
+    PLATFORM = PlatformEnum.WEB
+    DESTINATION = DestinationEnum.WEB
 
     def __init__(self, host="127.0.0.1", port=6600, **kwargs):
         super().__init__(**kwargs)
@@ -32,4 +32,4 @@ class ChemicalMessage(ChemicalMessageHandle, BaseMessage):
 
 
 if __name__ == '__main__':
-    ChemicalMessage().send("wtt", {"info": "test"}, "chemical")
+    ChemicalMessage().send("wtt", {"info": "test"}, FlagEnum.CHEMICAL)

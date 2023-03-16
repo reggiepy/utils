@@ -4,7 +4,7 @@
 import enum
 
 
-class Platform(enum.Enum):
+class PlatformEnum(enum.Enum):
     WEB = "web"
     WINDOWS = "windows"
     ANDROID = "android"
@@ -13,14 +13,18 @@ class Platform(enum.Enum):
     UNDEFINED = "undefined"
 
 
-class SourceModel(enum.Enum):
+class SourceEnum(enum.Enum):
     UNDEFINED = "undefined"
 
 
-class DestinationModel(enum.Enum):
+class DestinationEnum(enum.Enum):
     WEB = "web"
     WINDOWS = "windows"
     ANDROID = "android"
     IOS = "ios"
     ALL = "all"
     UNDEFINED = "undefined"
+
+
+class FlagEnum(enum.Enum):
+    CHEMICAL = "chemical"

@@ -4,11 +4,11 @@
 from typing import Any
 
 from utils.message_utils.base import BaseMessage
-from utils.message_utils.constants import Platform
+from utils.message_utils.constants import PlatformEnum
 
 
 class LocalMessage(BaseMessage):
-    PLATFORM = Platform.ALL
+    PLATFORM = PlatformEnum.ALL
 
     def __init__(self, host="127.0.0.1", port=6600, **kwargs):
         super().__init__(**kwargs)

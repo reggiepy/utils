@@ -1,6 +1,7 @@
 # *_*coding:utf-8 *_*
 # @Author : Reggie
 # @Time : 2023/2/8 16:04
+import enum
 import json
 import logging
 from abc import ABCMeta, abstractmethod
@@ -11,22 +12,22 @@ import six
 from pydantic import BaseModel, Field
 from requests.models import Response
 
-from utils.message_utils.constants import Platform, SourceModel, DestinationModel
+from utils.message_utils.constants import PlatformEnum, SourceEnum, DestinationEnum, FlagEnum
 
 
 class MessageModel(BaseModel):
-    source: SourceModel = Field(..., description="发送方")
-    destination: DestinationModel = Field(..., description="接收方")
+    source: SourceEnum = Field(..., description="发送方")
+    destination: DestinationEnum = Field(..., description="接收方")
     version: str = Field(..., description="版本信息")
-    flag: str = Field(..., description="推送标识")
+    flag: FlagEnum = Field(..., description="推送标识")
     data: Any = Field(..., description="推送数据")
 
 
 class BaseMessage(six.with_metaclass(ABCMeta)):
     VERSION = "1.0.0"
-    PLATFORM = Platform.UNDEFINED
-    SOURCE = SourceModel.UNDEFINED
-    DESTINATION = DestinationModel.UNDEFINED
+    PLATFORM = PlatformEnum.UNDEFINED
+    SOURCE = SourceEnum.UNDEFINED
+    DESTINATION = DestinationEnum.UNDEFINED
 
     def __init__(self, logger=None, destination=None, source=None):
         self.session: requests.Session = requests.Session()
@@ -76,7 +77,7 @@ class BaseMessage(six.with_metaclass(ABCMeta)):
 
     @property
     def platform(self):
-        if isinstance(self.PLATFORM, Platform):
+        if isinstance(self.PLATFORM, enum.Enum):
             return self.PLATFORM.value
         return self.PLATFORM
 
@@ -86,7 +87,7 @@ class BaseMessage(six.with_metaclass(ABCMeta)):
 
     @property
     def destination(self):
-        if isinstance(self.DESTINATION, DestinationModel):
+        if isinstance(self.DESTINATION, enum.Enum):
             return self.DESTINATION.value
         return self.DESTINATION
 
@@ -96,7 +97,7 @@ class BaseMessage(six.with_metaclass(ABCMeta)):
 
     @property
     def source(self):
-        if isinstance(self.SOURCE, SourceModel):
+        if isinstance(self.SOURCE, enum.Enum):
             return self.SOURCE.value
         return self.SOURCE
 
