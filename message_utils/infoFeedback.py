@@ -1,6 +1,6 @@
 import json
 from enum import Enum, unique
-from utils.message_utils.local_message import LocalMessage
+from utils.message_utils.chemical_message import ChemicalMessage
 
 
 @unique
@@ -32,7 +32,7 @@ class CalStatus(Enum):
 class INFOFeedback:
 
     def __init__(self, addressee=None, task=None, cal_label=None):
-        self.LocalMessage = LocalMessage()
+        self.LocalMessage = ChemicalMessage()
         self.addressee = addressee
         if task:
             self.task = task
@@ -73,7 +73,7 @@ class INFOFeedback:
             info_data = self.json_info(msg, code)
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
-            self.LocalMessage.send(self.addressee, json.dumps(self.info_message(info_data), ensure_ascii=False))
+            self.LocalMessage.send(self.addressee, self.info_message(info_data))
 
     def info_message(self, info_data):
         return {"msg_class": self.cal_label, "msg_data": info_data}
