@@ -67,6 +67,8 @@ class INFOFeedback:
             info_data = {"info_type": "note", "info_msg": msg}
         elif code == "result":
             info_data = {"info_type": "result", "info_msg": "计算结果", "info_data": msg}
+        elif code == "moduleInfo":
+            info_data = {"info_type": "moduleInfo", "info_msg": "模块信息", "info_data": msg}
         elif code == "exit":
             info_data = {"info_type": "exit", "info_msg": "退出计算"}
         else:

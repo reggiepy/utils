@@ -24,13 +24,25 @@ class FileHandle:
             except FileNotFoundError:
                 self.f.write_text(text_)
 
-    def write_json(self, json_: dict, mode="w"):
+    def write_json(self, json_: dict, mode="w", deep=False):
         if mode == "w":
             self.f.write_text(json.dumps(json_))
         elif mode == "a":
             try:
                 json__ = self.read_json()
-                json__.update(json_)
+
+                def join_(dict_1: dict, dict_2):
+                    for k, v in dict_2.items():
+                        v_ = dict_1.get(k)
+                        if isinstance(v, dict) and isinstance(v_, dict):
+                            new_v = join_(v_, v)
+                        elif isinstance(v, list) and isinstance(v_, list):
+                            new_v = v_ + v
+                        else:
+                            new_v = v
+                        dict_1[k] = new_v
+                    return dict_1
+                join_(json__, json_) if deep else json__.update(json_)
             except FileNotFoundError:
                 json__ = json_
             self.f.write_text(json.dumps(json__))
@@ -61,8 +73,8 @@ class RunInfoRecord:
     def update_run_state(self, state):
         self.state_f.write(state)
 
-    def update_run_info(self, info):
-        self.info_f.write_json(info, mode="a")
+    def update_run_info(self, info, mode="a", deep=True):
+        self.info_f.write_json(info, mode=mode, deep=deep)
 
     def del_run_info(self):
         self.info_dir.rm()
