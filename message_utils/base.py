@@ -58,7 +58,7 @@ class BaseMessage(six.with_metaclass(ABCMeta)):
             data=data
         )
 
-    def message_model(self, flag, data):
+    def message_model(self, flag, data) -> BaseModel:
         return self.gen_message_model(
             source=self.source,
             destination=self.destination,
@@ -155,4 +155,4 @@ class ChemicalMessageHandle:
             flag=flag,
             data=message
         )
-        return message.json()
+        return message.json(ensure_ascii=False)
