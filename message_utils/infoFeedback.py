@@ -1,6 +1,7 @@
-import json
 from enum import Enum, unique
-from utils.message_utils.local_message import LocalMessage
+
+from utils.message_utils.chemical_message import ChemicalMessage
+from utils.message_utils.constants import FlagEnum
 
 
 @unique
@@ -32,7 +33,7 @@ class CalStatus(Enum):
 class INFOFeedback:
 
     def __init__(self, addressee=None, task=None, cal_label=None):
-        self.LocalMessage = LocalMessage()
+        self.LocalMessage = ChemicalMessage()
         self.addressee = addressee
         if task:
             self.task = task
@@ -53,8 +54,10 @@ class INFOFeedback:
 
         def _info_data(info_type_, code1, msg1, msg2):
             # info_ = {"code": code1, "msg": msg2 or msg1}
-            info_ = {"code": code1, "msg": msg1, "data": msg2} if msg2 and msg1 != msg2 else {"code1": code, "msg": msg1}
+            info_ = {"code": code1, "msg": msg1, "data": msg2} if msg2 and msg1 != msg2 else {"code1": code,
+                                                                                              "msg": msg1}
             return {"info_type": f"{info_type_}", "info_msg": info_}
+
         if str(code_).startswith("3"):
             return _info_data("warn", code_, msg_, msg)
         elif str(code_).startswith("4"):
@@ -75,11 +78,10 @@ class INFOFeedback:
             info_data = self.json_info(msg, code)
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
-            self.LocalMessage.send(self.addressee, json.dumps(self.info_message(info_data), ensure_ascii=False))
+            self.LocalMessage.send(self.addressee, self.info_message(info_data), FlagEnum.CHEMICAL)
 
     def info_message(self, info_data):
         return {"msg_class": self.cal_label, "msg_data": info_data}
-
 
 
 if __name__ == '__main__':
