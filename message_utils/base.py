@@ -16,10 +16,10 @@ from utils.message_utils.constants import PlatformEnum, SourceEnum, DestinationE
 
 
 class MessageModel(BaseModel):
-    source: SourceEnum = Field(..., description="发送方")
-    destination: DestinationEnum = Field(..., description="接收方")
+    source: Union[SourceEnum, str] = Field(..., description="发送方")
+    destination: Union[DestinationEnum, str] = Field(..., description="接收方")
     version: str = Field(..., description="版本信息")
-    flag: FlagEnum = Field(..., description="推送标识")
+    flag: Union[FlagEnum, str] = Field(..., description="推送标识")
     data: Any = Field(..., description="推送数据")
 
 

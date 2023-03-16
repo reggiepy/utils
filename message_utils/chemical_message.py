@@ -32,4 +32,4 @@ class ChemicalMessage(ChemicalMessageHandle, BaseMessage):
 
 
 if __name__ == '__main__':
-    ChemicalMessage().send("wtt", {"info": "test"}, FlagEnum.CHEMICAL)
+    ChemicalMessage().send("wtt", {"info": "test"}, "test")
