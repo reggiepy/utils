@@ -79,10 +79,7 @@ class INFOFeedback:
             info_data = self.json_info(msg, code)
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
-            self.message.send(self.addressee, self.info_message(info_data), self.cal_label)
-
-    def info_message(self, info_data):
-        return {"msg_class": self.cal_label, "msg_data": info_data}
+            self.message.send(self.addressee, info_data, self.cal_label)
 
 
 if __name__ == '__main__':
