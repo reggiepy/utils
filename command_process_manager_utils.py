@@ -11,7 +11,7 @@ from typing import List, Union, Callable
 
 import psutil
 
-from utils.command_utils import create_popen
+from utils.command_utils import Command
 from utils.logger_utils import common_logger
 
 
@@ -49,7 +49,7 @@ class CommandProcessManager(object):
 
     def run(self, cmd, shell=False):
         self._logger.info(f"Running command: {cmd}")
-        p, err, rc = create_popen(cmd, shell, env=self.env)
+        p, err, rc = Command.create_popen(cmd, shell, env=self.env)
         if rc != 0:
             self._logger.info(f"command start failed.")
             return
