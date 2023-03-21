@@ -34,11 +34,18 @@ class CommandProcessManager(object):
         self._is_stop_event = threading.Event()
         self._logger = logger or logging.getLogger()
         self.health_checks: List = health_checks or []
+        self.is_running = True
 
     def stop(self):
         self._stop_event.set()
         self._is_stop_event.wait(2)
         return True
+
+    def health_check(self, p):
+        try:
+            return psutil.Process(p.pid).is_running()
+        except:
+            return False
 
     def run(self, cmd, shell=False):
         self._logger.info(f"Running command: {cmd}")
@@ -47,11 +54,14 @@ class CommandProcessManager(object):
             self._logger.info(f"command start failed.")
             return
         self._logger.info(f"command start success. Pid: {p.pid}")
-        status_ok = True
-        while status_ok:
+        self.is_running = True
+        while self.is_running:
             if self._stop_event.is_set():
                 self._logger.info("stop running command.")
                 p.terminate()
+                break
+            if not self.health_check(p):
+                self._logger.info(f"command process {p.pid} is killed.")
                 break
             for health_check in self.health_checks:
                 if isinstance(health_check, HealthCheck):
