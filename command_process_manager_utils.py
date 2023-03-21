@@ -5,6 +5,7 @@ import abc
 import logging
 import os
 import subprocess
+import sys
 import threading
 import time
 from typing import List, Union, Callable
@@ -60,6 +61,16 @@ class CommandProcessManager(object):
         self._is_stop_event.wait(2)
         return True
 
+    def thread_read(self, p):
+        def handle():
+            while not self._is_stop_event.is_set():
+                line = p.stderr.readline()  # blocking read
+                print(line.rstrip().decode('utf-8'))
+
+        t = threading.Thread(target=handle)
+        t.daemon = True
+        t.start()
+
     def run(self):
         self._logger.info(f"Running command: {self.cmd} {' '.join([f'{k}:{v}' for k, v in self.env.items()])}")
         p, err, rc = Command.create_popen(self.cmd, self.shell, env=self.cmd_env)
@@ -68,6 +79,7 @@ class CommandProcessManager(object):
             return
         self._logger.info(f"command: {self.cmd} [{p.pid}] start success.")
         self.is_running = True
+        self.thread_read(p)
         while self.is_running:
             if self._stop_event.is_set():
                 self._logger.info(f"stop running command: {self.cmd}")
@@ -101,6 +113,7 @@ if __name__ == '__main__':
             return psutil.Process(p.pid).is_running()
         except:
             return False
+
 
     cmd = r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd"
     m = CommandProcessManager(cmd=cmd, health_checks=[health_check], logger=common_logger())
