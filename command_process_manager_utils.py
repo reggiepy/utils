@@ -13,6 +13,7 @@ import psutil
 
 from utils.command_utils import Command
 from utils.logger_utils import common_logger
+from utils.psutil_utils import Psutil
 
 
 def _health_check(p: subprocess.Popen) -> bool:
@@ -27,25 +28,24 @@ class HealthCheck(metaclass=abc.ABCMeta):
 
 
 class CommandProcessManager(object):
-    def __init__(self, health_checks: Union[List[Union[Callable, _health_check, HealthCheck]], None] = None,
-                 logger=None):
+    def __init__(
+            self,
+            health_checks: Union[List[Union[Callable, _health_check, HealthCheck]], None] = None,
+            logger=None,
+            process_stop_callback: Callable = None,
+    ):
         self.env = dict(os.environ)
         self._stop_event = threading.Event()
         self._is_stop_event = threading.Event()
         self._logger = logger or logging.getLogger()
         self.health_checks: List = health_checks or []
         self.is_running = True
+        self.process_stop_callback = process_stop_callback
 
     def stop(self):
         self._stop_event.set()
         self._is_stop_event.wait(2)
         return True
-
-    def health_check(self, p):
-        try:
-            return psutil.Process(p.pid).is_running()
-        except:
-            return False
 
     def run(self, cmd, shell=False):
         self._logger.info(f"Running command: {cmd}")
@@ -60,7 +60,9 @@ class CommandProcessManager(object):
                 self._logger.info("stop running command.")
                 p.terminate()
                 break
-            if not self.health_check(p):
+            if not Psutil.is_active_pid(p.pid):
+                if callable(self.process_stop_callback):
+                    self.process_stop_callback()
                 self._logger.info(f"command process {p.pid} is killed.")
                 break
             for health_check in self.health_checks:

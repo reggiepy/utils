@@ -6,27 +6,29 @@ import logging
 import psutil
 
 
-def is_active_pid(pid):
-    try:
-        return psutil.Process(pid).is_running()
-    except:
-        return False
+class Psutil:
+    @classmethod
+    def is_active_pid(cls, pid):
+        try:
+            return psutil.Process(pid).is_running()
+        except:
+            return False
 
-
-def kill(proc_pid, logger=None):
-    logger = logger or logging.getLogger()
-    process = psutil.Process(proc_pid)
-    for proc in process.children(recursive=True):
-        logger.info(f"kill {proc.pid}")
-        proc.kill()
-    logger.info(f"kill {process.pid}")
-    process.kill()
-
-
-def kill_by_name(proc_name, logger=None):
-    logger = logger or logging.getLogger()
-    for proc in psutil.process_iter():
-        # check whether the process name matches
-        if proc.name() == proc_name:
-            logger.info(f"kill {proc_name}")
+    @classmethod
+    def kill(cls, proc_pid, logger=None):
+        logger = logger or logging.getLogger()
+        process = psutil.Process(proc_pid)
+        for proc in process.children(recursive=True):
+            logger.info(f"kill {proc.pid}")
             proc.kill()
+        logger.info(f"kill {process.pid}")
+        process.kill()
+
+    @classmethod
+    def kill_by_name(cls, proc_name, logger=None):
+        logger = logger or logging.getLogger()
+        for proc in psutil.process_iter():
+            # check whether the process name matches
+            if proc.name() == proc_name:
+                logger.info(f"kill {proc_name}")
+                proc.kill()
