@@ -31,11 +31,14 @@ class CommandProcessManager(object):
                  logger=None):
         self.env = dict(os.environ)
         self._stop_event = threading.Event()
+        self._is_stop_event = threading.Event()
         self._logger = logger or logging.getLogger()
         self.health_checks: List = health_checks or []
 
     def stop(self):
         self._stop_event.set()
+        self._is_stop_event.wait(2)
+        return True
 
     def run(self, cmd, shell=False):
         self._logger.info(f"Running command: {cmd}")
@@ -59,6 +62,7 @@ class CommandProcessManager(object):
                         self._logger.info(f"command health check failed.")
             time.sleep(1)
         self._logger.info(f"stop command process manager.")
+        self._is_stop_event.set()
 
     def run_backend(self, cmd, shell=False):
         t = threading.Thread(target=self.run, args=(cmd, shell,))
@@ -73,9 +77,11 @@ if __name__ == '__main__':
         except:
             return False
 
+
     m = CommandProcessManager(health_checks=[health_check], logger=common_logger())
-    m.run_backend(r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd")
+    m.run_backend(
+        r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd")
     while 1:
         c = input()
         if c == "1":
-            m.stop()
+            print(m.stop())
