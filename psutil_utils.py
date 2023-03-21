@@ -21,3 +21,12 @@ def kill(proc_pid, logger=None):
         proc.kill()
     logger.info(f"kill {process.pid}")
     process.kill()
+
+
+def kill_by_name(proc_name, logger=None):
+    logger = logger or logging.getLogger()
+    for proc in psutil.process_iter():
+        # check whether the process name matches
+        if proc.name() == proc_name:
+            logger.info(f"kill {proc_name}")
+            proc.kill()
