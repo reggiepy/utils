@@ -20,6 +20,10 @@ def _health_check(p: subprocess.Popen) -> bool:
     return True
 
 
+def _process_stop_callback(self):
+    pass
+
+
 class HealthCheck(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
@@ -30,40 +34,49 @@ class HealthCheck(metaclass=abc.ABCMeta):
 class CommandProcessManager(object):
     def __init__(
             self,
+            cmd,
+            env: Union[dict, None] = None,
+            shell=False,
             health_checks: Union[List[Union[Callable, _health_check, HealthCheck]], None] = None,
             logger=None,
             process_stop_callback: Callable = None,
     ):
-        self.env = dict(os.environ)
+        self.cmd = cmd
+        self.shell = shell
+        self.cmd_env = dict(os.environ)
+        self.env = env or {}
+        if env is not None:
+            for k, v in env.items():
+                self.cmd_env[k] = v
         self._stop_event = threading.Event()
         self._is_stop_event = threading.Event()
         self._logger = logger or logging.getLogger()
         self.health_checks: List = health_checks or []
         self.is_running = True
-        self.process_stop_callback = process_stop_callback
+        self.process_stop_callback: Union[Callable, _process_stop_callback] = process_stop_callback
 
     def stop(self):
         self._stop_event.set()
         self._is_stop_event.wait(2)
         return True
 
-    def run(self, cmd, shell=False):
-        self._logger.info(f"Running command: {cmd}")
-        p, err, rc = Command.create_popen(cmd, shell, env=self.env)
+    def run(self):
+        self._logger.info(f"Running command: {self.cmd} {' '.join([f'{k}:{v}' for k, v in self.env.items()])}")
+        p, err, rc = Command.create_popen(self.cmd, self.shell, env=self.cmd_env)
         if rc != 0:
-            self._logger.info(f"command start failed.")
+            self._logger.info(f"command: {self.cmd} start failed.")
             return
-        self._logger.info(f"command start success. Pid: {p.pid}")
+        self._logger.info(f"command: {self.cmd} [{p.pid}] start success.")
         self.is_running = True
         while self.is_running:
             if self._stop_event.is_set():
-                self._logger.info("stop running command.")
+                self._logger.info(f"stop running command: {self.cmd}")
                 p.terminate()
                 break
             if not Psutil.is_active_pid(p.pid):
                 if callable(self.process_stop_callback):
-                    self.process_stop_callback()
-                self._logger.info(f"command process {p.pid} is killed.")
+                    self.process_stop_callback(self)
+                self._logger.info(f"command: {self.cmd} process [{p.pid}] is killed.")
                 break
             for health_check in self.health_checks:
                 if isinstance(health_check, HealthCheck):
@@ -71,13 +84,13 @@ class CommandProcessManager(object):
                 if callable(health_check):
                     status_ok = health_check(p)
                     if not status_ok:
-                        self._logger.info(f"command health check failed.")
+                        self._logger.info(f"command: {self.cmd} health check failed.")
             time.sleep(1)
-        self._logger.info(f"stop command process manager.")
+        self._logger.info(f"stop command: {self.cmd} process [{p.pid}] manager.")
         self._is_stop_event.set()
 
-    def run_backend(self, cmd, shell=False):
-        t = threading.Thread(target=self.run, args=(cmd, shell,))
+    def run_backend(self):
+        t = threading.Thread(target=self.run)
         t.daemon = True
         t.start()
 
@@ -89,10 +102,9 @@ if __name__ == '__main__':
         except:
             return False
 
-
-    m = CommandProcessManager(health_checks=[health_check], logger=common_logger())
-    m.run_backend(
-        r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd")
+    cmd = r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd"
+    m = CommandProcessManager(cmd=cmd, health_checks=[health_check], logger=common_logger())
+    m.run_backend()
     while 1:
         c = input()
         if c == "1":

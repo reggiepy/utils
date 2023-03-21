@@ -8,7 +8,7 @@ import shlex
 import subprocess
 from typing import Union, Tuple
 
-from utils.psutil_utils import kill
+from utils.psutil_utils import Psutil
 
 
 class Command:
@@ -82,7 +82,7 @@ class Command:
             except subprocess.TimeoutExpired:
                 p.terminate()
                 outs, errs = p.communicate()
-                kill(p.pid)
+                Psutil.kill(p.pid)
                 return outs, errs, rc
         except Exception as e:
             err = f"Run Command Error: {e}"
