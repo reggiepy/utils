@@ -7,6 +7,8 @@ from pathlib import Path
 
 import etcd3
 
+from utils.logger_utils import common_logger
+
 
 class EtcdBase(metaclass=abc.ABCMeta):
     def __init__(self, prefix, logger=None):
@@ -103,12 +105,7 @@ class EtcdBase(metaclass=abc.ABCMeta):
 
 
 if __name__ == '__main__':
-    root_logger = logging.getLogger()
-    formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s (%(funcName)s in %(filename)s %(lineno)d)")
-    stream_handle = logging.StreamHandler()
-    stream_handle.setFormatter(formatter)
-    root_logger.addHandler(stream_handle)
-    root_logger.setLevel("DEBUG")
+    common_logger()
 
     c = EtcdBase("/config")
     # for i in c.watch("/"):
