@@ -86,7 +86,8 @@ class EtcdBase(metaclass=abc.ABCMeta):
             return self.client.delete(self.real_key(key))
 
     def update(self, key, *args, **kwargs):
-        with self.client.lock(key):
+        real_key = self.real_key(key)
+        with self.client.lock(real_key):
             data = self.get(key)
             if args:
                 data.value = args[0]
@@ -95,7 +96,7 @@ class EtcdBase(metaclass=abc.ABCMeta):
                     if not isinstance(data.value, dict):
                         raise Exception(f"{k} value not is dict. {data.value}")
                     data.value[k] = v
-            self.client.put(key, value=data.json(ensure_ascii=False))
+            self.client.put(real_key, value=data.json(ensure_ascii=False))
             return data
 
     def watch(self, key):
