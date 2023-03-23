@@ -5,7 +5,6 @@ import abc
 import logging
 import os
 import subprocess
-import sys
 import threading
 import time
 from typing import List, Union, Callable
@@ -41,8 +40,14 @@ class CommandProcessManager(object):
             health_checks: Union[List[Union[Callable, _health_check, HealthCheck]], None] = None,
             logger=None,
             process_stop_callback: Callable = None,
+            process_logger=None,
     ):
         self.cmd = cmd
+        self.process_logger = process_logger
+        if isinstance(self.process_logger, str):
+            self.process_logger = logging.getLogger(self.process_logger)
+        if not callable(self.process_logger):
+            self.process_logger = logging.getLogger("command_process_manager.process_logger")
         self.shell = shell
         self.cmd_env = dict(os.environ)
         self.env = env or {}
@@ -65,7 +70,7 @@ class CommandProcessManager(object):
         def handle():
             while not self._is_stop_event.is_set():
                 line = p.stderr.readline()  # blocking read
-                print(line.rstrip().decode('utf-8'))
+                self.process_logger.info(line.rstrip().decode('utf-8'))
 
         t = threading.Thread(target=handle)
         t.daemon = True
