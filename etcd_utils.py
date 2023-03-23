@@ -109,16 +109,20 @@ class EtcdClient:
             self.client.put(real_key, value=data.json(ensure_ascii=False))
             return data
 
-    def pop(self, key, default_value=None):
+    def pop(self, key, default_value=None, value_callback=None):
         default_value = default_value or {}
         real_key = self.real_key(key)
         with self.client.lock(real_key):
             data = self.get(key)
+            if value_callback and callable(value_callback):
+                value = value_callback(data.value)
+            else:
+                value = default_value
             self.client.put(
                 real_key,
                 value=EtcdData(
                     key=data.key,
-                    value=default_value
+                    value=value
                 ).json(ensure_ascii=False)
             )
             return data
