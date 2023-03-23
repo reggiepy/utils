@@ -46,7 +46,7 @@ class CommandProcessManager(object):
         self.process_logger = process_logger
         if isinstance(self.process_logger, str):
             self.process_logger = logging.getLogger(self.process_logger)
-        if not callable(self.process_logger):
+        if not isinstance(self.process_logger, logging.Logger):
             self.process_logger = logging.getLogger("command_process_manager.process_logger")
         self.shell = shell
         self.cmd_env = dict(os.environ)
