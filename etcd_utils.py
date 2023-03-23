@@ -1,7 +1,6 @@
 # *_*coding:utf-8 *_*
 # @Author : Reggie
 # @Time : 2023/3/16 11:28
-import abc
 import json
 import logging
 from pathlib import Path
@@ -12,6 +11,11 @@ from etcd3.client import KVMetadata
 from pydantic import BaseModel, Field
 
 from utils.logger_utils import common_logger
+
+
+class AlreadyExistsException(Exception):
+    def __str__(self):
+        return "key already exists"
 
 
 class EtcdMetadata(BaseModel):
@@ -31,7 +35,7 @@ class EtcdData(EtcdMetadata):
     value: Any = Field(..., description="value")
 
 
-class EtcdBase(metaclass=abc.ABCMeta):
+class EtcdClient:
     def __init__(self, prefix, logger=None):
         self.client = etcd3.client()
         self.prefix = prefix
@@ -47,18 +51,24 @@ class EtcdBase(metaclass=abc.ABCMeta):
     def real_key(self, key):
         return Path(self.prefix).joinpath(key).as_posix()
 
-    def set(self, key, value):
+    def set(self, key, value, force=True):
         real_key = self.real_key(key)
         with self.client.lock(key):
+            data = self.get(real_key)
+            if data and not force:
+                raise AlreadyExistsException()
             data = EtcdData(key=key, value=value)
             self.client.put(real_key, data.json(ensure_ascii=False))
             return data
 
-    def get(self, key):
+    def get(self, key, default=None):
         real_key = self.real_key(key)
         value, meta = self.client.get(real_key)
-        value = json.loads(value).get('value')
-        return EtcdData(key=key, value=value, meta=meta)
+        try:
+            value = json.loads(value).get('value')
+            return EtcdData(key=key, value=value, meta=meta)
+        except Exception as e:
+            return default
 
     def list(self):
         result = []
@@ -97,6 +107,20 @@ class EtcdBase(metaclass=abc.ABCMeta):
                         raise Exception(f"{k} value not is dict. {data.value}")
                     data.value[k] = v
             self.client.put(real_key, value=data.json(ensure_ascii=False))
+            return data
+
+    def pop(self, key, default_value=None):
+        default_value = default_value or {}
+        real_key = self.real_key(key)
+        with self.client.lock(real_key):
+            data = self.get(key)
+            self.client.put(
+                real_key,
+                value=EtcdData(
+                    key=data.key,
+                    value=default_value
+                ).json(ensure_ascii=False)
+            )
             return data
 
     def watch(self, key):
@@ -143,32 +167,38 @@ class EtcdBase(metaclass=abc.ABCMeta):
 
 
 def t_watch_prefix():
-    c = EtcdBase("/config")
+    c = EtcdClient("/config")
     events_iterator, cancel = c.watch_prefix("/")
     for event in events_iterator:
         print(event)
 
 
 def t_curd():
-    c = EtcdBase("/config")
+    c = EtcdClient("/config")
+    ret = c.get("t")
+    print("get", ret)
+    ret = c.delete("t")
+    print("delete", ret)
     ret = c.set("key3", 1)
-    print(ret)
+    print("set", ret)
     ret = c.set("key4", {"test": 1})
-    print(ret)
+    print("set", ret)
     ret = c.update("key4", **{"test": 2})
-    print(ret)
+    print("update", ret)
     ret = c.set("key3/t", 1)
-    print(ret)
+    print("set", ret)
     ret = c.get("key3")
-    print(ret)
+    print("get", ret)
     ret = c.list()
-    print(ret)
+    print("list", ret)
     ret = c.list_dict_result()
-    print(ret)
+    print("list_dict_result", ret)
+    ret = c.pop("key4")
+    print("pop", ret)
     ret = c.delete("key4")
-    print(ret)
+    print("delete", ret)
     ret = c.clear()
-    print(ret)
+    print("clear", ret)
 
 
 if __name__ == '__main__':
