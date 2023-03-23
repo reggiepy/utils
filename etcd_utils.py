@@ -208,3 +208,4 @@ def t_curd():
 if __name__ == '__main__':
     common_logger()
     t_curd()
+

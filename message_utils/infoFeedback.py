@@ -17,10 +17,9 @@ class NoteStatus(Enum):
 
 @unique
 class CalStatus(Enum):
-    CALCULATE_ANOMALY = (36000, "计算异常")  # 参数非法
-    MODULE_INSTANCE_ERROR = (37000, "模块实例化失败")  # 参数非法
-    MODULE_ERROR = (37100, "加载模块异常")  # 参数非法
-    DATA_ERROR = (37200, "加载数据异常")  # 参数非法
+    CALCULATE_ERROR = (46000, "计算异常")  # 参数非法
+    MODULE_ERROR = (47100, "计算模块加载异常")  # 参数非法
+    DATA_ERROR = (47200, "加载数据异常")  # 参数非法
 
     PARAM_IS_NULL = (34001, "参数为空")  # 参数为空
     PARAM_ILLEGAL = (34002, "参数非法")  # 参数非法
@@ -33,12 +32,13 @@ class CalStatus(Enum):
 
 class INFOFeedback:
 
-    def __init__(self, addressee=None, task=None, cal_label=None):
+    def __init__(self, addressee=None, task=None, cal_label=None, is_dynamic=False):
         self.message: BaseMessage = ChemicalMessage()
         self.addressee = addressee
         if task:
             self.task = task
         self.cal_label = cal_label or "cal"
+        self.is_dynamic = is_dynamic
 
     @staticmethod
     def json_info(msg=None, code=None):
@@ -50,11 +50,10 @@ class INFOFeedback:
                 code_, msg_ = CalStatus[code].value
             elif isinstance(code, (int, str)) and str(code).isdigit():
                 code_, msg_ = int(code), msg
-        except (AttributeError, ValueError):
+        except Exception:
             pass
 
         def _info_data(info_type_, code1, msg1, msg2):
-            # info_ = {"code": code1, "msg": msg2 or msg1}
             info_ = {"code": code1, "msg": msg1, "data": msg2} if msg2 and msg1 != msg2 else {"code1": code,
                                                                                               "msg": msg1}
             return {"info_type": f"{info_type_}", "info_msg": info_}
@@ -67,8 +66,10 @@ class INFOFeedback:
             return _info_data("rest", code_, msg_, msg)
 
     def feedback(self, msg=None, code=None):
+        info_data = {}
         if code == "note":
-            info_data = {"info_type": "note", "info_msg": msg}
+            if not self.is_dynamic:
+                info_data = {"info_type": "note", "info_msg": msg}
         elif code == "result":
             info_data = {"info_type": "result", "info_msg": "计算结果", "info_data": msg}
         elif code == "moduleInfo":
@@ -77,6 +78,8 @@ class INFOFeedback:
             info_data = {"info_type": "exit", "info_msg": "退出计算"}
         else:
             info_data = self.json_info(msg, code)
+            if hasattr(self, "moduleName"):
+                info_data["moduleName"] = self.moduleName
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
             self.message.send(self.addressee, info_data, self.cal_label)
