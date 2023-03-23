@@ -2,12 +2,33 @@
 # @Author : Reggie
 # @Time : 2023/3/16 11:28
 import abc
+import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import etcd3
+from etcd3.client import KVMetadata
+from pydantic import BaseModel, Field
 
 from utils.logger_utils import common_logger
+
+
+class EtcdMetadata(BaseModel):
+    meta: KVMetadata = Field(None, exclude=True)
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class EtcdClearData(EtcdMetadata):
+    key: str = Field(..., description="key")
+    status: bool = Field(False, description="delete status")
+
+
+class EtcdData(EtcdMetadata):
+    key: Any = Field(..., description="key")
+    value: Any = Field(..., description="value")
 
 
 class EtcdBase(metaclass=abc.ABCMeta):
@@ -29,57 +50,50 @@ class EtcdBase(metaclass=abc.ABCMeta):
     def set(self, key, value):
         real_key = self.real_key(key)
         with self.client.lock(key):
-            return self.client.put(real_key, value)
+            data = EtcdData(key=key, value=value)
+            self.client.put(real_key, data.json(ensure_ascii=False))
+            return data
 
     def get(self, key):
         real_key = self.real_key(key)
-        return self.client.get(real_key)
+        value, meta = self.client.get(real_key)
+        value = json.loads(value).get('value')
+        return EtcdData(key=key, value=value, meta=meta)
 
     def list(self):
         result = []
-        for v, _ in self.client.get_prefix(self.prefix):
-            result.append(v)
-        return result
-
-    def list_key_kv(self, key):
-        real_key = self.real_key(key)
-        result = {}
-        for v, KVMetadata in self.client.get_prefix(real_key):
-            k = KVMetadata.key
-            for k in k.decode("utf-8").rsplit("/", 1)[-1:]:
-                result[k] = v
-        return result
-
-    def gen_key_k(self, key, k):
-        return Path(self.real_key(key)).joinpath(k).as_posix()
-
-    def set_key_k(self, key, k, v):
-        real_key_k = self.gen_key_k(key, k)
-        with self.client.lock(real_key_k):
-            return self.client.put(real_key_k, v)
-
-    def delete_key_k(self, key, k):
-        real_key_k = self.gen_key_k(key, k)
-        return self.delete(real_key_k)
-
-    def delete_key_all_k(self, key):
-        result = []
-        real_key = self.real_key(key)
-        for v, KVMetadata in self.client.get_prefix(real_key):
-            key = KVMetadata.key
-            for k in key.decode("utf-8").rsplit("/", 1)[-1:]:
-                break
+        for value, meta in self.client.get_prefix(self.prefix):
+            try:
+                key = meta.key.decode("utf-8")
+                k = key.replace(f"{self.prefix}/", "")
+                value = json.loads(value)
+                v = value.get("value")
+                data = EtcdData(key=k, value=v, meta=meta)
+            except:
+                self._logger.error(f"Unable to parse {meta.key} value: {value}.")
             else:
-                continue
-            result.append(self.delete(k))
+                result.append(data)
+        return result
+
+    def list_dict_result(self):
+        result = {}
+        for item in self.list():
+            result[item.key] = item.value
         return result
 
     def delete(self, key):
         with self.client.lock(key):
             return self.client.delete(self.real_key(key))
 
-    def delete_prev_kv(self, key):
-        return self.client.delete(self.real_key(key), prev_kv=True, return_response=True)
+    def update(self, key, **kwargs):
+        with self.client.lock(key):
+            data = self.get(key)
+            for k, v in kwargs.items():
+                assert isinstance(data.value, dict)
+                if k in data.value:
+                    data.value[k] = v
+            self.client.put(key, value=data.json(ensure_ascii=False))
+            return data
 
     def watch(self, key):
         real_key = self.real_key(key)
@@ -88,13 +102,10 @@ class EtcdBase(metaclass=abc.ABCMeta):
 
     def clear(self):
         result = []
-        for v, KVMetadata in self.client.get_prefix(self.prefix):
-            key = KVMetadata.key
-            for k in key.decode("utf-8").rsplit("/", 1)[-1:]:
-                break
-            else:
-                continue
-            result.append(self.delete(k))
+        for v, meta in self.client.get_prefix(self.prefix):
+            key = meta.key.decode("utf-8")
+            k = key.replace(f"{self.prefix}/", "")
+            result.append(EtcdClearData(key=k, status=self.delete(key), meta=meta))
         return result
 
     def __enter__(self):
@@ -106,18 +117,34 @@ class EtcdBase(metaclass=abc.ABCMeta):
 
 if __name__ == '__main__':
     common_logger()
-
     c = EtcdBase("/config")
-    # for i in c.watch("/"):
-    #     print(i)
 
-    ret = c.set("key", "1")
-    print("set", ret)
-    ret = c.get("key")
-    print("get", ret)
+    # ret = c.set("key", "1")
+    # print("set", ret)
+    # ret = c.get("key")
+    # print("get", ret)
+    # ret = c.list()
+    # print("list", ret)
+    # ret = c.list_key_kv("key")
+    # print("list_kv", ret)
+    # ret = c.delete_prev_kv("key")
+    # print("delete_prev_kv", ret)
+
+    ret = c.set("key3", 1)
+    print(ret)
+    ret = c.set("key4", {"test": 1})
+    print(ret)
+    ret = c.update("key4", **{"test": 2})
+    print(ret)
+    ret = c.set("key3/t", 1)
+    print(ret)
+    ret = c.get("key3")
+    print(ret)
     ret = c.list()
-    print("list", ret)
-    ret = c.list_key_kv("key")
-    print("list_kv", ret)
-    ret = c.delete_prev_kv("key")
-    print("delete_prev_kv", ret)
+    print(ret)
+    ret = c.list_dict_result()
+    print(ret)
+    ret = c.delete("key4")
+    print(ret)
+    ret = c.clear()
+    print(ret)
