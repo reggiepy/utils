@@ -101,7 +101,6 @@ class FileHandle:
                 json__ = self.read_json()
 
                 def join_(dict_1: dict, dict_2):
-                    print(dict_1, dict_2)
                     for k, v in dict_2.items():
                         v_ = dict_1.get(k)
                         if isinstance(v, dict) and isinstance(v_, dict):

@@ -30,8 +30,8 @@ class JobEtcdRecord:
         self.state_c = JobEtcdBase(f"/config/job/state/")
         # self.jobs_c = JobEtcdBase(f"/config/job/")
 
-    def get_run_state(self, addressee):
-        data = self.state_c.get(addressee)
+    def get_run_state(self):
+        data = self.state_c.get(self.addressee)
         return data if data is None else data.value.get("state")
         #     data = data.value.get("state")
         # return self.state_c.get(addressee).value.get("state")
@@ -63,17 +63,17 @@ class JobEtcdRecord:
         except Exception as e:
             return 0, {}
 
-    def del_run_info(self, addressee):
+    def del_run_info(self):
         self.param_c.delete(self.task)
-        self.state_c.delete(addressee)
+        self.state_c.delete(self.addressee)
         # self.un_record_user_job(addressee)
 
 
 def job_etcd_restart():
     try:
         JobEtcdBase(f"/config/job/").clear()
-    except Exception:
-        pass
+    except Exception as e:
+        print(e)
 
 if __name__ == '__main__':
     JobEtcdRecord().state_c.set("local_cslab_15", {"21:25":25})

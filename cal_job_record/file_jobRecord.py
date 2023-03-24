@@ -11,6 +11,7 @@ class JobFileRecord:
             self.addressee = addressee
             self.state_f = FileHandle(f"{RUN_INFO_PATH}/state_{addressee}.txt", is_dir=False)
         if task:
+            self.task = task
             self.param_f = FileHandle(f"{RUN_INFO_PATH}/info_{task}.txt", is_dir=False)
 
     def get_run_state(self):
@@ -28,7 +29,8 @@ class JobFileRecord:
             return {}
 
     def update_run_state(self, state):
-        self.state_f.write(state)
+        # if get_user_job
+        self.state_f.write_json({"state": state}, mode="a")
 
     def update_run_param(self, info, mode="a", deep=True):
         self.param_f.write_json(info, mode=mode, deep=deep)
@@ -39,7 +41,7 @@ class JobFileRecord:
 
     def record_user_job(self, label, pro, task):
         # 记录用户任务， 记录任务状态， 记录任务属于的项目、运行的地方
-        self.update_run_state("await")
+        # self.update_run_state("await")
         state, data = self.get_user_job()
         self.state_f.write_json({"projectId": pro, "calLabel": label, "task": task, "state": "await"}, mode="w")
         return state, {"projectId": None, "calLabel": None, "task": None, "state": "await"} if data is None else data
