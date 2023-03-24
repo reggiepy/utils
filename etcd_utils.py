@@ -37,7 +37,7 @@ class EtcdData(EtcdMetadata):
 
 class EtcdClient:
     def __init__(self, prefix, logger=None):
-        self.client = etcd3.client()
+        self.client = etcd3.client(host="127.0.0.1")
         self.prefix = prefix
         self.lock_prefix = ""
         self._logger = logging.getLogger("etcd3.client")
@@ -178,31 +178,39 @@ def t_watch_prefix():
 
 
 def t_curd():
+    import time
+    start = time.time()
     c = EtcdClient("/config")
+    print(1, time.time()-start)
     ret = c.get("t")
+    print(2, time.time()-start)
     print("get", ret)
-    ret = c.delete("t")
-    print("delete", ret)
-    ret = c.set("key3", 1)
-    print("set", ret)
-    ret = c.set("key4", {"test": 1})
-    print("set", ret)
-    ret = c.update("key4", **{"test": 2})
-    print("update", ret)
-    ret = c.set("key3/t", 1)
-    print("set", ret)
-    ret = c.get("key3")
+    start = time.time()
+    ret = c.get("t")
+    print(3, time.time()-start)
     print("get", ret)
-    ret = c.list()
-    print("list", ret)
-    ret = c.list_dict_result()
-    print("list_dict_result", ret)
-    ret = c.pop("key4")
-    print("pop", ret)
-    ret = c.delete("key4")
-    print("delete", ret)
-    ret = c.clear()
-    print("clear", ret)
+    # ret = c.delete("t")
+    # print("delete", ret)
+    # ret = c.set("key3", 1)
+    # print("set", ret)
+    # ret = c.set("key4", {"test": 1})
+    # print("set", ret)
+    # ret = c.update("key4", **{"test": 2})
+    # print("update", ret)
+    # ret = c.set("key3/t", 1)
+    # print("set", ret)
+    # ret = c.get("key3")
+    # print("get", ret)
+    # ret = c.list()
+    # print("list", ret)
+    # ret = c.list_dict_result()
+    # print("list_dict_result", ret)
+    # ret = c.pop("key4")
+    # print("pop", ret)
+    # ret = c.delete("key4")
+    # print("delete", ret)
+    # ret = c.clear()
+    # print("clear", ret)
 
 
 if __name__ == '__main__':
