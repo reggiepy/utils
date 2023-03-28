@@ -65,21 +65,30 @@ class INFOFeedback:
         else:
             return _info_data("rest", code_, msg_, msg)
 
+    def module_feedback(self, label=None, msg=None, code=None):
+        label = label if label in ["error", "warn"] else "warn"
+        info_data = {"info_type": label, "info_msg": msg, "info_code": code}
+        if hasattr(self, "moduleName"):
+            info_data["moduleName"] = self.moduleName
+        if info_data and hasattr(self, "task"):
+            info_data["task"] = self.task
+            self.message.send(self.addressee, info_data, self.cal_label)
+
     def feedback(self, msg=None, code=None):
         info_data = {}
         if code == "note":
             if not self.is_dynamic:
-                info_data = {"info_type": "note", "info_msg": msg}
+                info_data = {"info_type": "note", "info_msg": msg, "info_code": 20000}
         elif code == "result":
-            info_data = {"info_type": "result", "info_msg": "计算结果", "info_data": msg}
+            info_data = {"info_type": "result", "info_msg": "计算结果", "info_data": msg, "info_code": 20000}
         elif code == "moduleInfo":
-            info_data = {"info_type": "moduleInfo", "info_msg": "模块信息", "info_data": msg}
+            info_data = {"info_type": "moduleInfo", "info_msg": "模块信息", "info_data": msg, "info_code": 20000}
         elif code == "exit":
-            info_data = {"info_type": "exit", "info_msg": "退出计算"}
-        else:
-            info_data = self.json_info(msg, code)
-            if hasattr(self, "moduleName"):
-                info_data["moduleName"] = self.moduleName
+            info_data = {"info_type": "exit", "info_msg": "退出计算", "info_code": 20000}
+        # else:
+        #     info_data = self.json_info(msg, code)
+        #     if hasattr(self, "moduleName"):
+        #         info_data["moduleName"] = self.moduleName
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
             self.message.send(self.addressee, info_data, self.cal_label)
