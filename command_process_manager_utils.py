@@ -12,7 +12,7 @@ from typing import List, Union, Callable
 import psutil
 
 from utils.command_utils import Command
-from utils.logger_utils import common_logger
+from utils.logger_utils import LoggerUtils
 from utils.psutil_utils import Psutil
 
 
@@ -121,7 +121,7 @@ if __name__ == '__main__':
 
 
     cmd = r"C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/etcd.exe --data-dir C:/Users/wt/Desktop/etcd-v3.4.24-windows-amd64/default.etcd"
-    m = CommandProcessManager(cmd=cmd, health_checks=[health_check], logger=common_logger())
+    m = CommandProcessManager(cmd=cmd, health_checks=[health_check], logger=LoggerUtils.common_console_logger())
     m.run_backend()
     while 1:
         c = input()

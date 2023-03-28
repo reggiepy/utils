@@ -10,7 +10,7 @@ import etcd3
 from etcd3.client import KVMetadata
 from pydantic import BaseModel, Field
 
-from utils.logger_utils import common_logger
+from utils.logger_utils import LoggerUtils
 
 
 class AlreadyExistsException(Exception):
@@ -181,13 +181,13 @@ def t_curd():
     import time
     start = time.time()
     c = EtcdClient("/config")
-    print(1, time.time()-start)
+    print(1, time.time() - start)
     ret = c.get("t")
-    print(2, time.time()-start)
+    print(2, time.time() - start)
     print("get", ret)
     start = time.time()
     ret = c.get("t")
-    print(3, time.time()-start)
+    print(3, time.time() - start)
     print("get", ret)
     # ret = c.delete("t")
     # print("delete", ret)
@@ -214,6 +214,5 @@ def t_curd():
 
 
 if __name__ == '__main__':
-    common_logger()
+    LoggerUtils.common_console_logger()
     t_curd()
-
