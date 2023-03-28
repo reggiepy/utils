@@ -89,6 +89,10 @@ class INFOFeedback:
         #     info_data = self.json_info(msg, code)
         #     if hasattr(self, "moduleName"):
         #         info_data["moduleName"] = self.moduleName
+        if hasattr(self, "moduleName"):
+            info_data["moduleName"] = self.moduleName
+        else:
+            info_data["moduleName"] = "系统"
         if info_data and hasattr(self, "task"):
             info_data["task"] = self.task
             self.message.send(self.addressee, info_data, self.cal_label)
