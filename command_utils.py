@@ -139,6 +139,7 @@ class CommandProcessManager(object):
             logger=None,
             process_stop_callback: Callable = None,
             process_logger=None,
+            logger_encoding="utf-8",
     ):
         self.cmd = cmd
         self.process_logger = process_logger
@@ -158,6 +159,7 @@ class CommandProcessManager(object):
         self.health_checks: List = health_checks or []
         self.is_running = True
         self.process_stop_callback: Union[Callable, _process_stop_callback] = process_stop_callback
+        self.logger_encoding = logger_encoding
 
     def stop(self):
         self._stop_event.set()
@@ -168,7 +170,7 @@ class CommandProcessManager(object):
         def handle():
             while not self._is_stop_event.is_set():
                 line = p.stderr.readline()  # blocking read
-                self.process_logger.info(line.rstrip().decode('utf-8'))
+                self.process_logger.info(line.rstrip().decode(self.logger_encoding))
 
         t = threading.Thread(target=handle)
         t.daemon = True
