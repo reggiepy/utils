@@ -18,10 +18,10 @@ class QTextEditLogger(logging.Handler):
 
 
 class QTextBrowserLogger(logging.Handler):
-    def __init__(self, browser: QtWidgets.QTextBrowser):
+    def __init__(self, browser: QtWidgets.QTextBrowser, max_block_count=1000):
         super().__init__()
         self.browser = browser
-        self.browser.document().setMaximumBlockCount(1000)
+        self.browser.document().setMaximumBlockCount(max_block_count)
 
     def emit(self, record):
         msg = self.format(record)
