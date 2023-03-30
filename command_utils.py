@@ -147,6 +147,7 @@ class CommandProcessManager(object):
             self.process_logger = logging.getLogger(self.process_logger)
         if not isinstance(self.process_logger, logging.Logger):
             self.process_logger = logging.getLogger("command_process_manager.process_logger")
+            self.process_logger.propagate = False
         self.shell = shell
         self.cmd_env = dict(os.environ)
         self.env = env or {}
