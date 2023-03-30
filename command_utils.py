@@ -15,6 +15,8 @@ from typing import Tuple
 from utils.logger_utils import LoggerUtils
 from utils.psutil_utils import Psutil
 
+_logger = logging.getLogger("chemical.utils")
+
 
 class Command:
     @classmethod
@@ -40,7 +42,7 @@ class Command:
             env=None,
             logger=None,
     ) -> Tuple[Union[subprocess.Popen, None], str, int]:
-        logger = logger or logging.getLogger()
+        logger = logger or _logger
         out, err, rc = None, "", 1
 
         cmd = cls.handle_command(cmd, shell)
@@ -68,7 +70,7 @@ class Command:
             encode="utf-8",
             logger=None
     ):
-        logger = logger or logging.getLogger()
+        logger = logger or _logger
 
         out, err, rc = {}, "", 1
 
@@ -140,6 +142,8 @@ class CommandProcessManager(object):
             process_stop_callback: Callable = None,
             process_logger=None,
             logger_encoding="utf-8",
+            initializer=None,
+            initargs=None,
     ):
         self.cmd = cmd
         self.process_logger = process_logger
@@ -161,23 +165,32 @@ class CommandProcessManager(object):
         self.is_running = True
         self.process_stop_callback: Union[Callable, _process_stop_callback] = process_stop_callback
         self.logger_encoding = logger_encoding
+        self.initializer = initializer
+        self.initargs = initargs or ()
+        self.logger_handler_thread = None
 
     def stop(self):
         self._stop_event.set()
         self._is_stop_event.wait(2)
         return True
 
-    def thread_read(self, p):
-        def handle():
-            while not self._is_stop_event.is_set():
-                line = p.stderr.readline()  # blocking read
-                self.process_logger.info(line.rstrip().decode(self.logger_encoding))
-
-        t = threading.Thread(target=handle)
-        t.daemon = True
-        t.start()
+    def process_logger_handler(self, p):
+        while not self._is_stop_event.is_set():
+            line = p.stderr.readline()  # blocking read
+            if not line:
+                continue
+            self.process_logger.info(line.rstrip().decode(self.logger_encoding))
 
     def run(self):
+        if self.initializer is not None:
+            try:
+                self.initializer(*self.initargs)
+            except BaseException:
+                self._logger.critical('Exception in initializer:', exc_info=True)
+                # The parent will notice that the process stopped and
+                # mark the pool broken
+                return
+
         self._logger.info(f"Running command: {self.cmd} {' '.join([f'{k}:{v}' for k, v in self.env.items()])}")
         p, err, rc = Command.create_popen(self.cmd, self.shell, env=self.cmd_env)
         if rc != 0:
@@ -185,7 +198,9 @@ class CommandProcessManager(object):
             return
         self._logger.info(f"command: {self.cmd} [{p.pid}] start success.")
         self.is_running = True
-        self.thread_read(p)
+
+        self.logger_handler_thread = threading.Thread(target=self.process_logger_handler, args=(p,), daemon=True)
+        self.logger_handler_thread.start()
         while self.is_running:
             if self._stop_event.is_set():
                 self._logger.info(f"stop running command: {self.cmd}")

@@ -5,6 +5,8 @@ import logging
 
 from PyQt5 import QtWidgets
 
+from utils.command_utils import CommandProcessManager
+
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, widget: QtWidgets.QPlainTextEdit):
@@ -26,3 +28,8 @@ class QTextBrowserLogger(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.browser.append(msg)
+
+
+class QtCommandProcessManager(CommandProcessManager):
+    def process_logger_handler(self, p):
+        pass
