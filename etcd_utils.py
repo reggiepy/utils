@@ -99,13 +99,20 @@ class EtcdClient:
         real_key = self.real_key(key)
         with self.client.lock(real_key):
             data = self.get(key)
-            if args:
-                data.value = args[0]
+            if data is not None:
+                if args:
+                    data.value = args[0]
+                else:
+                    for k, v in kwargs.items():
+                        if not isinstance(data.value, dict):
+                            raise Exception(f"{k} value not is dict. {data.value}")
+                        data.value[k] = v
             else:
-                for k, v in kwargs.items():
-                    if not isinstance(data.value, dict):
-                        raise Exception(f"{k} value not is dict. {data.value}")
-                    data.value[k] = v
+                if args:
+                    value = args[0]
+                else:
+                    value = kwargs
+                data = EtcdData(key=real_key, value=value)
             self.client.put(real_key, value=data.json(ensure_ascii=False))
             return data
 
@@ -187,6 +194,12 @@ def t_curd():
     print("get", ret)
     start = time.time()
     ret = c.get("t")
+    print(3, time.time() - start)
+    print("get", ret)
+    ret = c.update("v", test=1)
+    print(3, time.time() - start)
+    print("get", ret)
+    ret = c.update("v", {"dddd": 3})
     print(3, time.time() - start)
     print("get", ret)
     # ret = c.delete("t")
