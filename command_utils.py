@@ -227,11 +227,9 @@ class CommandProcessManager(object):
             simple_cmd = Command.simple_command(self.cmd)
             for health_check in self.health_checks:
                 if not isinstance(health_check, HealthCheck):
-                    print(1)
-                    self._logger.warning(f"health check {health_check} must be a HealthCheck subclass")
+                    self._logger.error(f"health check {health_check} must be a HealthCheck subclass")
                     continue
                 status_ok = health_check.check(self)
-                print(status_ok)
                 if not status_ok:
                     health_check.failed_callback(self)
                     self._logger.info(f"command: {simple_cmd} health check failed.")
