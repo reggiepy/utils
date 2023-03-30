@@ -9,16 +9,26 @@ import shlex
 import subprocess
 import threading
 import time
+from pathlib import Path
 from typing import List, Union, Callable
 from typing import Tuple
 
 from utils.logger_utils import LoggerUtils
 from utils.psutil_utils import Psutil
 
-_logger = logging.getLogger("chemical.utils")
+_logger = logging.getLogger("chemical.utils.command_utils")
 
 
 class Command:
+    @classmethod
+    def simple_command(cls, command):
+        """
+        for print
+        :param command:
+        :return:
+        """
+        return Path(command).name
+
     @classmethod
     def handle_command(cls, command, shell):
         if shell:
@@ -127,8 +137,28 @@ def _process_stop_callback(self):
 class HealthCheck(metaclass=abc.ABCMeta):
     @classmethod
     @abc.abstractmethod
-    def check(cls, p) -> bool:
+    def check(cls, manager) -> bool:
+        """
+        :param CommandProcessManager manager:
+        :return:
+        """
         return True
+
+    @classmethod
+    @abc.abstractmethod
+    def failed_callback(cls, manager):
+        """
+        :param CommandProcessManager manager:
+        :return:
+        """
+
+    @classmethod
+    @abc.abstractmethod
+    def success_callback(cls, manager):
+        """
+        :param CommandProcessManager manager:
+        :return:
+        """
 
 
 class CommandProcessManager(object):
@@ -146,6 +176,7 @@ class CommandProcessManager(object):
             initargs=None,
     ):
         self.cmd = cmd
+        self._logger = logger or _logger
         self.process_logger = process_logger
         if isinstance(self.process_logger, str):
             self.process_logger = logging.getLogger(self.process_logger)
@@ -158,28 +189,55 @@ class CommandProcessManager(object):
         if env is not None:
             for k, v in env.items():
                 self.cmd_env[k] = v
-        self._stop_event = threading.Event()
-        self._is_stop_event = threading.Event()
-        self._logger = logger or logging.getLogger()
-        self.health_checks: List = health_checks or []
-        self.is_running = True
+        self._stop_prev_event = threading.Event()
+        self._stop_end_event = threading.Event()
+        self.health_checks: List[HealthCheck] = health_checks or []
         self.process_stop_callback: Union[Callable, _process_stop_callback] = process_stop_callback
         self.logger_encoding = logger_encoding
         self.initializer = initializer
         self.initargs = initargs or ()
-        self.logger_handler_thread = None
+        self.process: Union[subprocess.Popen, None] = None
 
-    def stop(self):
-        self._stop_event.set()
-        self._is_stop_event.wait(2)
+    def stop(self, timeout=5):
+        self._stop_prev_event.set()
+        self._stop_end_event.wait(timeout)
         return True
 
-    def process_logger_handler(self, p):
-        while not self._is_stop_event.is_set():
-            line = p.stderr.readline()  # blocking read
+    @property
+    def process_pid(self):
+        if self.process:
+            return self.process.pid
+        return None
+
+    @property
+    def is_running(self):
+        if self.process_pid:
+            return Psutil.is_active_pid(self.process_pid)
+        return False
+
+    def process_logger_handler(self):
+        while not self._stop_end_event.is_set():
+            line = self.process.stderr.readline()  # blocking read
             if not line:
                 continue
             self.process_logger.info(line.rstrip().decode(self.logger_encoding))
+
+    def health_check_handler(self):
+        while not self._stop_end_event.is_set():
+            simple_cmd = Command.simple_command(self.cmd)
+            for health_check in self.health_checks:
+                if not isinstance(health_check, HealthCheck):
+                    print(1)
+                    self._logger.warning(f"health check {health_check} must be a HealthCheck subclass")
+                    continue
+                status_ok = health_check.check(self)
+                print(status_ok)
+                if not status_ok:
+                    health_check.failed_callback(self)
+                    self._logger.info(f"command: {simple_cmd} health check failed.")
+                else:
+                    health_check.success_callback(self)
+            time.sleep(1)
 
     def run(self):
         if self.initializer is not None:
@@ -191,36 +249,32 @@ class CommandProcessManager(object):
                 # mark the pool broken
                 return
 
-        self._logger.info(f"Running command: {self.cmd} {' '.join([f'{k}:{v}' for k, v in self.env.items()])}")
-        p, err, rc = Command.create_popen(self.cmd, self.shell, env=self.cmd_env)
-        if rc != 0:
-            self._logger.info(f"command: {self.cmd} start failed.")
-            return
-        self._logger.info(f"command: {self.cmd} [{p.pid}] start success.")
-        self.is_running = True
+        simple_cmd = Command.simple_command(self.cmd)
 
-        self.logger_handler_thread = threading.Thread(target=self.process_logger_handler, args=(p,), daemon=True)
-        self.logger_handler_thread.start()
-        while self.is_running:
-            if self._stop_event.is_set():
-                self._logger.info(f"stop running command: {self.cmd}")
-                p.terminate()
+        self._logger.info(f"Running command: {simple_cmd} {' '.join([f'{k}:{v}' for k, v in self.env.items()])}")
+        self.process, err, rc = Command.create_popen(self.cmd, self.shell, env=self.cmd_env)
+        if rc != 0:
+            self._logger.info(f"command: {simple_cmd} start failed.")
+            return
+        self._logger.info(f"command: {simple_cmd} [{self.process.pid}] start success.")
+
+        t = threading.Thread(target=self.process_logger_handler, daemon=True)
+        t.start()
+        t = threading.Thread(target=self.health_check_handler, daemon=True)
+        t.start()
+        while 1:
+            if self._stop_prev_event.is_set():
+                self._logger.info(f"stop running command: {simple_cmd}")
+                self.process.terminate()
                 break
-            if not Psutil.is_active_pid(p.pid):
-                if callable(self.process_stop_callback):
-                    self.process_stop_callback(self)
-                self._logger.info(f"command: {self.cmd} process [{p.pid}] is killed.")
+            if not Psutil.is_active_pid(self.process.pid):
+                self._logger.info(f"command: {simple_cmd} process [{self.process.pid}] is killed.")
                 break
-            for health_check in self.health_checks:
-                if isinstance(health_check, HealthCheck):
-                    health_check = HealthCheck.check
-                if callable(health_check):
-                    status_ok = health_check(p)
-                    if not status_ok:
-                        self._logger.info(f"command: {self.cmd} health check failed.")
             time.sleep(1)
-        self._logger.info(f"stop command: {self.cmd} process [{p.pid}] manager.")
-        self._is_stop_event.set()
+        self._logger.info(f"stop command: {simple_cmd} process [{self.process.pid}] manager.")
+        self._stop_end_event.set()
+        if callable(self.process_stop_callback):
+            self.process_stop_callback(self)
 
     def run_backend(self):
         t = threading.Thread(target=self.run)
